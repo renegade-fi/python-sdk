@@ -42,19 +42,61 @@ class ExternalMatchOptions:
         return self
 
 class ExternalMatchClient:
+    """Client for interacting with the Renegade external matching API.
+    
+    This client handles authentication and provides methods for requesting quotes,
+    assembling matches, and executing trades.
+    """
+    
     def __init__(self, api_key: str, api_secret: str, base_url: str):
+        """Initialize a new ExternalMatchClient.
+        
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+            base_url: The base URL of the Renegade API
+        """
         self.api_key = api_key
         self.http_client = RelayerHttpClient(base_url, api_secret)
 
     @classmethod
     def new_sepolia_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for the Sepolia testnet.
+        
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+            
+        Returns:
+            A new ExternalMatchClient configured for Sepolia
+        """
         return cls(api_key, api_secret, SEPOLIA_BASE_URL)
 
     @classmethod
     def new_mainnet_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for mainnet.
+        
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+            
+        Returns:
+            A new ExternalMatchClient configured for mainnet
+        """
         return cls(api_key, api_secret, MAINNET_BASE_URL)
 
     async def request_quote(self, order: ExternalOrder) -> Optional[SignedExternalQuote]:
+        """Request a quote for the given order.
+        
+        Args:
+            order: The order to request a quote for
+            
+        Returns:
+            A signed quote if one is available, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
         request = ExternalQuoteRequest(external_order=order)
 
         headers = self._get_headers()
@@ -66,6 +108,17 @@ class ExternalMatchClient:
         return None
 
     async def assemble_quote(self, quote: SignedExternalQuote) -> Optional[AtomicMatchApiBundle]:
+        """Assemble a quote into a match bundle with default options.
+        
+        Args:
+            quote: The signed quote to assemble
+            
+        Returns:
+            A match bundle if assembly succeeds, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
         return await self.assemble_quote_with_options(quote, ExternalMatchOptions())
 
     async def assemble_quote_with_options(
@@ -73,6 +126,18 @@ class ExternalMatchClient:
         quote: SignedExternalQuote, 
         options: ExternalMatchOptions
     ) -> Optional[AtomicMatchApiBundle]:
+        """Assemble a quote into a match bundle with custom options.
+        
+        Args:
+            quote: The signed quote to assemble
+            options: Custom options for quote assembly
+            
+        Returns:
+            A match bundle if assembly succeeds, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
         request = AssembleExternalMatchRequest(
             do_gas_estimation=options.do_gas_estimation,
             receiver_address=options.receiver_address,
@@ -88,6 +153,17 @@ class ExternalMatchClient:
         return None
 
     async def request_external_match(self, order: ExternalOrder) -> Optional[AtomicMatchApiBundle]:
+        """Request an external match for an order with default options.
+        
+        Args:
+            order: The order to match
+            
+        Returns:
+            A match bundle if matching succeeds, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
         return await self.request_external_match_with_options(order, ExternalMatchOptions())
 
     async def request_external_match_with_options(
@@ -95,6 +171,18 @@ class ExternalMatchClient:
         order: ExternalOrder, 
         options: ExternalMatchOptions
     ) -> Optional[AtomicMatchApiBundle]:
+        """Request an external match for an order with custom options.
+        
+        Args:
+            order: The order to match
+            options: Custom options for matching
+            
+        Returns:
+            A match bundle if matching succeeds, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
         request = ExternalMatchRequest(
             do_gas_estimation=options.do_gas_estimation,
             receiver_address=options.receiver_address,
@@ -109,11 +197,27 @@ class ExternalMatchClient:
         return None
 
     def _get_headers(self) -> Headers:
+        """Get the headers required for API requests.
+        
+        Returns:
+            Headers containing the API key
+        """
         headers = Headers()
         headers[RENEGADE_API_KEY_HEADER] = self.api_key
         return headers
 
     async def _handle_optional_response(self, response: Response) -> Optional[dict]:
+        """Handle an API response that may be empty.
+        
+        Args:
+            response: The API response to handle
+            
+        Returns:
+            The response data if present, None for 204 responses
+            
+        Raises:
+            ExternalMatchClientError: If the response indicates an error
+        """
         if response.status_code == 204:  # NO_CONTENT
             return None
         elif response.status_code == 200:  # OK

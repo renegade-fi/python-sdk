@@ -54,6 +54,9 @@ class FeeTake(BaseModelWithConfig):
     relayer_fee: int
     protocol_fee: int
 
+    def total(self) -> int:
+        return self.relayer_fee + self.protocol_fee
+
 class ExternalOrder(BaseModelWithConfig):
     quote_mint: str
     base_mint: str

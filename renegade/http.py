@@ -17,19 +17,57 @@ Req = TypeVar('Req')
 Resp = TypeVar('Resp')
 
 class RelayerHttpClient:
+    """HTTP client for making authenticated requests to the Renegade relayer API.
+    
+    This client handles request signing and authentication using HMAC-SHA256.
+    """
+    
     def __init__(self, base_url: str, auth_key: str):
+        """Initialize a new RelayerHttpClient.
+        
+        Args:
+            base_url: The base URL of the relayer API
+            auth_key: The base64-encoded authentication key for request signing
+        """
         self.client = AsyncClient()
         self.base_url = base_url
         # Decode base64 auth key
         self.auth_key = base64.b64decode(auth_key)
 
     async def post(self, path: str, body: Any) -> Response:
+        """Make a POST request without custom headers.
+        
+        Args:
+            path: The API endpoint path
+            body: The request body to send
+            
+        Returns:
+            The API response
+        """
         return await self.post_with_headers(path, body, Headers())
 
     async def get(self, path: str) -> Response:
+        """Make a GET request without custom headers.
+        
+        Args:
+            path: The API endpoint path
+            
+        Returns:
+            The API response
+        """
         return await self.get_with_headers(path, Headers())
 
     async def post_with_headers(self, path: str, body: Any, custom_headers: Headers) -> Response:
+        """Make a POST request with custom headers.
+        
+        Args:
+            path: The API endpoint path
+            body: The request body to send
+            custom_headers: Additional headers to include
+            
+        Returns:
+            The API response
+        """
         url = f"{self.base_url}{path}"
         body_bytes = json.dumps(body).encode()
         headers = self._add_auth(path, custom_headers, body_bytes)
@@ -37,6 +75,15 @@ class RelayerHttpClient:
         return response
 
     async def get_with_headers(self, path: str, custom_headers: Headers) -> Response:
+        """Make a GET request with custom headers.
+        
+        Args:
+            path: The API endpoint path
+            custom_headers: Additional headers to include
+            
+        Returns:
+            The API response
+        """
         url = f"{self.base_url}{path}"
         headers = self._add_auth(path, custom_headers, b"")
         
@@ -44,7 +91,17 @@ class RelayerHttpClient:
         return response
 
     def _get_header_bytes(self, headers: Headers) -> bytes:
-        """Get sorted Renegade headers bytes for signature calculation"""
+        """Get sorted Renegade headers bytes for signature calculation.
+        
+        This method extracts all headers with the x-renegade prefix (except auth),
+        sorts them by key, and concatenates them into a single byte string.
+        
+        Args:
+            headers: The headers to process
+            
+        Returns:
+            A byte string containing the concatenated header data
+        """
         renegade_headers = []
         for key, value in headers.items():
             key_lower = key.lower()
@@ -63,6 +120,19 @@ class RelayerHttpClient:
         return header_bytes
 
     def _add_auth(self, path: str, headers: Headers, body: bytes) -> Headers:
+        """Add authentication headers to a request.
+        
+        This method adds the expiration timestamp and HMAC signature headers
+        required for request authentication.
+        
+        Args:
+            path: The request path
+            headers: The existing headers
+            body: The request body bytes
+            
+        Returns:
+            Headers with authentication information added
+        """
         # Add timestamp and expiry
         timestamp = int(time.time() * 1000)
         expiry = timestamp + int(REQUEST_SIGNATURE_DURATION.total_seconds() * 1000)
