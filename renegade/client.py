@@ -41,6 +41,28 @@ class ExternalMatchOptions:
         self.receiver_address = receiver_address
         return self
 
+@dataclass
+class AssembleExternalMatchOptions:
+    do_gas_estimation: bool = False
+    receiver_address: Optional[str] = None
+    updated_order: Optional[ExternalOrder] = None
+
+    @classmethod
+    def new(cls) -> "AssembleExternalMatchOptions":
+        return cls()
+
+    def with_gas_estimation(self, do_gas_estimation: bool) -> "AssembleExternalMatchOptions":
+        self.do_gas_estimation = do_gas_estimation
+        return self
+
+    def with_receiver_address(self, receiver_address: str) -> "AssembleExternalMatchOptions":
+        self.receiver_address = receiver_address
+        return self
+
+    def with_updated_order(self, updated_order: ExternalOrder) -> "AssembleExternalMatchOptions":
+        self.updated_order = updated_order
+        return self
+
 class ExternalMatchClient:
     """Client for interacting with the Renegade external matching API.
     
@@ -119,12 +141,12 @@ class ExternalMatchClient:
         Raises:
             ExternalMatchClientError: If the request fails
         """
-        return await self.assemble_quote_with_options(quote, ExternalMatchOptions())
+        return await self.assemble_quote_with_options(quote, AssembleExternalMatchOptions())
 
     async def assemble_quote_with_options(
         self, 
         quote: SignedExternalQuote, 
-        options: ExternalMatchOptions
+        options: AssembleExternalMatchOptions
     ) -> Optional[AtomicMatchApiBundle]:
         """Assemble a quote into a match bundle with custom options.
         
@@ -141,7 +163,8 @@ class ExternalMatchClient:
         request = AssembleExternalMatchRequest(
             do_gas_estimation=options.do_gas_estimation,
             receiver_address=options.receiver_address,
-            signed_quote=quote
+            signed_quote=quote,
+            updated_order=options.updated_order
         )
 
         headers = self._get_headers()

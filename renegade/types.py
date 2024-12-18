@@ -115,3 +115,4 @@ class AssembleExternalMatchRequest(BaseModelWithConfig):
     do_gas_estimation: bool = False
     receiver_address: Optional[str] = None
     signed_quote: Optional[SignedExternalQuote] = None 
+    updated_order: Optional[ExternalOrder] = None
