@@ -1,4 +1,4 @@
-from .client import ExternalMatchClient, ExternalMatchOptions, ExternalMatchClientError
+from .client import ExternalMatchClient, ExternalMatchOptions, ExternalMatchClientError, AssembleExternalMatchOptions
 from .http import RelayerHttpClient
 from .types import ExternalOrder, OrderSide, AtomicMatchApiBundle, SignedExternalQuote
 
@@ -7,6 +7,7 @@ __all__ = [
     "SignedExternalQuote",
     "ExternalMatchClient",
     "ExternalMatchOptions",
+    "AssembleExternalMatchOptions",
     "ExternalMatchClientError",
     "RelayerHttpClient",
     "ExternalOrder",
