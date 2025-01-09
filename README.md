@@ -102,6 +102,12 @@ This can be run with
 uv run examples/quote_validation.py
 ```
 
+### Rate Limits
+The rate limits for external match endpoints are as follows: 
+- **Quote**: 100 requests per minute
+- **Assemble**: 5 _unsettled_ bundles per minute. That is, if an assembled bundle is submitted on-chain, the rate limiter will reset. 
+If an assembled match is not settled on-chain, the rate limiter will remove one token from the per-minute allowance.
+
 ### Supported Tokens
 The tokens supported by the darkpool can be found at the following links:
 - [Testnet](https://github.com/renegade-fi/token-mappings/blob/main/testnet.json)
