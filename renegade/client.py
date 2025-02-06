@@ -19,6 +19,9 @@ REQUEST_EXTERNAL_QUOTE_ROUTE = "/v0/matching-engine/quote"
 ASSEMBLE_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/assemble-external-match"
 REQUEST_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/request-external-match"
 
+GAS_SPONSORSHIP_QUERY_PARAM = "use_gas_sponsorship"
+GAS_REFUND_ADDRESS_QUERY_PARAM = "refund_address"
+
 class ExternalMatchClientError(Exception):
     def __init__(self, message: str, status_code: Optional[int] = None):
         super().__init__(message)
@@ -28,6 +31,8 @@ class ExternalMatchClientError(Exception):
 class ExternalMatchOptions:
     do_gas_estimation: bool = False
     receiver_address: Optional[str] = None
+    request_gas_sponsorship: bool = False
+    gas_refund_address: Optional[str] = None
 
     @classmethod
     def new(cls) -> "ExternalMatchOptions":
@@ -41,11 +46,33 @@ class ExternalMatchOptions:
         self.receiver_address = receiver_address
         return self
 
+    def with_gas_sponsorship(self, request_gas_sponsorship: bool, gas_refund_address: Optional[str] = None) -> "ExternalMatchOptions":
+        self.request_gas_sponsorship = request_gas_sponsorship
+        self.gas_refund_address = gas_refund_address
+        return self 
+
+    def with_updated_order(self, updated_order: ExternalOrder) -> "ExternalMatchOptions":
+        self.updated_order = updated_order
+        return self
+
+    def build_request_path(self) -> str:
+        """
+        Builds the path at which the request will be sent, with query params 
+        """
+        request_sponsorship_str = str(self.request_gas_sponsorship).lower()
+        path = f"{REQUEST_EXTERNAL_MATCH_ROUTE}?{GAS_SPONSORSHIP_QUERY_PARAM}={request_sponsorship_str}"
+        if self.gas_refund_address:
+            path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
+
+        return path
+
 @dataclass
 class AssembleExternalMatchOptions:
     do_gas_estimation: bool = False
     receiver_address: Optional[str] = None
     updated_order: Optional[ExternalOrder] = None
+    request_gas_sponsorship: bool = False
+    gas_refund_address: Optional[str] = None
 
     @classmethod
     def new(cls) -> "AssembleExternalMatchOptions":
@@ -62,6 +89,25 @@ class AssembleExternalMatchOptions:
     def with_updated_order(self, updated_order: ExternalOrder) -> "AssembleExternalMatchOptions":
         self.updated_order = updated_order
         return self
+
+    def with_gas_sponsorship(self, request_gas_sponsorship: bool) -> "AssembleExternalMatchOptions":
+        self.request_gas_sponsorship = request_gas_sponsorship
+        return self
+
+    def with_gas_refund_address(self, gas_refund_address: str) -> "AssembleExternalMatchOptions":
+        self.gas_refund_address = gas_refund_address
+        return self
+
+    def build_request_path(self) -> str:
+        """
+        Builds the path at which the request will be sent, with query params 
+        """
+        request_sponsorship_str = str(self.request_gas_sponsorship).lower()
+        path = f"{ASSEMBLE_EXTERNAL_MATCH_ROUTE}?{GAS_SPONSORSHIP_QUERY_PARAM}={request_sponsorship_str}"
+        if self.gas_refund_address:
+            path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
+
+        return path
 
 class ExternalMatchClient:
     """Client for interacting with the Renegade external matching API.
@@ -167,8 +213,9 @@ class ExternalMatchClient:
             updated_order=options.updated_order
         )
 
+        path = options.build_request_path()
         headers = self._get_headers()
-        response = await self.http_client.post_with_headers(ASSEMBLE_EXTERNAL_MATCH_ROUTE, request.model_dump(), headers)
+        response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
         match_resp = await self._handle_optional_response(response)
         if match_resp:
             return ExternalMatchResponse(**match_resp).match_bundle
@@ -211,8 +258,10 @@ class ExternalMatchClient:
             receiver_address=options.receiver_address,
             external_order=order
         )
+
+        path = options.build_request_path()
         headers = self._get_headers()
-        response = await self.http_client.post_with_headers(REQUEST_EXTERNAL_MATCH_ROUTE, request.model_dump(), headers)
+        response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
         match_resp = await self._handle_optional_response(response)
         if match_resp:
             return ExternalMatchResponse(**match_resp).match_bundle
