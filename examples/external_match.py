@@ -6,7 +6,7 @@ from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3.middleware import SignAndSendRawMiddlewareBuilder
 from renegade import ExternalMatchClient
-from renegade.types import AtomicMatchApiBundle, OrderSide, ExternalOrder
+from renegade.types import ExternalMatchResponse, OrderSide, ExternalOrder
 
 # Constants
 BASE_MINT = "0xc3414a7ef14aaaa9c4522dfc00a4e66e74e9c25a"  # Testnet wETH
@@ -28,11 +28,11 @@ def get_wallet() -> tuple[AsyncWeb3, LocalAccount]:
     
     return w3, account
 
-async def execute_bundle(bundle: AtomicMatchApiBundle) -> None:
+async def execute_bundle(bundle: ExternalMatchResponse) -> None:
     (w3, account) = get_wallet()
 
     print("\nSubmitting bundle...")
-    tx = bundle.settlement_tx
+    tx = bundle.match_bundle.settlement_tx
     tx['to'] = Web3.to_checksum_address(tx['to'])
     
     # Add required transaction fields

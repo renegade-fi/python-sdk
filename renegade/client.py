@@ -193,7 +193,7 @@ class ExternalMatchClient:
         self, 
         quote: SignedExternalQuote, 
         options: AssembleExternalMatchOptions
-    ) -> Optional[AtomicMatchApiBundle]:
+    ) -> Optional[ExternalMatchResponse]:
         """Assemble a quote into a match bundle with custom options.
         
         Args:
@@ -218,53 +218,7 @@ class ExternalMatchClient:
         response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
         match_resp = await self._handle_optional_response(response)
         if match_resp:
-            return ExternalMatchResponse(**match_resp).match_bundle
-
-        return None
-
-    async def request_external_match(self, order: ExternalOrder) -> Optional[AtomicMatchApiBundle]:
-        """Request an external match for an order with default options.
-        
-        Args:
-            order: The order to match
-            
-        Returns:
-            A match bundle if matching succeeds, None otherwise
-            
-        Raises:
-            ExternalMatchClientError: If the request fails
-        """
-        return await self.request_external_match_with_options(order, ExternalMatchOptions())
-
-    async def request_external_match_with_options(
-        self, 
-        order: ExternalOrder, 
-        options: ExternalMatchOptions
-    ) -> Optional[AtomicMatchApiBundle]:
-        """Request an external match for an order with custom options.
-        
-        Args:
-            order: The order to match
-            options: Custom options for matching
-            
-        Returns:
-            A match bundle if matching succeeds, None otherwise
-            
-        Raises:
-            ExternalMatchClientError: If the request fails
-        """
-        request = ExternalMatchRequest(
-            do_gas_estimation=options.do_gas_estimation,
-            receiver_address=options.receiver_address,
-            external_order=order
-        )
-
-        path = options.build_request_path()
-        headers = self._get_headers()
-        response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
-        match_resp = await self._handle_optional_response(response)
-        if match_resp:
-            return ExternalMatchResponse(**match_resp).match_bundle
+            return ExternalMatchResponse(**match_resp)
 
         return None
 
