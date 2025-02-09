@@ -8,7 +8,7 @@ from web3.middleware import SignAndSendRawMiddlewareBuilder
 from renegade import ExternalMatchClient
 from renegade.client import AssembleExternalMatchOptions
 from renegade.types import (
-    AtomicMatchApiBundle,
+    ExternalMatchResponse,
     OrderSide,
     ExternalOrder,
 )
@@ -38,7 +38,7 @@ def get_wallet() -> tuple[AsyncWeb3, LocalAccount]:
     
     return w3, account
 
-async def execute_bundle(bundle: AtomicMatchApiBundle) -> None:
+async def execute_bundle(bundle: ExternalMatchResponse) -> None:
     """Execute a settlement transaction bundle.
     
     Args:
@@ -47,7 +47,7 @@ async def execute_bundle(bundle: AtomicMatchApiBundle) -> None:
     (w3, account) = get_wallet()
 
     print("\nSubmitting bundle...")
-    tx = bundle.settlement_tx
+    tx = bundle.match_bundle.settlement_tx
     tx['to'] = Web3.to_checksum_address(tx['to'])
     
     # Add required transaction fields

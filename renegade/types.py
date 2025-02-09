@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from enum import Enum
 from typing import Optional, Dict, Any
 from web3 import Web3
@@ -104,6 +104,11 @@ class ExternalMatchRequest(BaseModelWithConfig):
 
 class ExternalMatchResponse(BaseModelWithConfig):
     match_bundle: AtomicMatchApiBundle
+    # Whether the match has received gas sponsorship
+    #
+    # If `true`, the bundle is routed through a gas rebate contract that
+    # refunds the gas used by the match to the configured address
+    gas_sponsored: bool = Field(alias="is_sponsored", default=False)
 
 class ExternalQuoteRequest(BaseModelWithConfig):
     external_order: ExternalOrder
