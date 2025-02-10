@@ -31,6 +31,7 @@ The client should then submit this match to the darkpool.
 
 Upon receiving an external match, the darkpool contract will update the encrypted state of the internal party, and fulfill obligations to the external party directly through ERC20 transfers. As such, the external party must approve the token they _sell_ before the external match can be settled.
 
+
 ### Example
 The following snippet demonstrates how to request an external match, assemble the quote into a match bundle, and submit the bundle to the darkpool. See [`examples/external_match.py`](examples/external_match.py) for a complete example.
 ```python
@@ -69,6 +70,26 @@ if not bundle:
 
 print(f"Received bundle: {bundle}")
 ```
+
+## Gas Sponsorship
+
+The Renegade relayer will cover the gas cost of external match transactions, up to a daily limit. When requested, the relayer will re-route the settlement transaction through a gas rebate contract. This contract refunds the cost of the transaction (in ether) to the configured address. If no address is given, the rebate is sent to `tx.origin`. 
+
+To request gas sponsorship, simply add `with_gas_sponsorship` to the `AssembleExternalMatchOptions` type:
+```python
+# Refund address defaults to tx.origin
+options = AssembleExternalMatchOptions.new().with_gas_sponsorship(True).with_gas_refund_address("0xdeadbeef")
+bundle = client.assemble_quote_with_options(quote, options)
+# ... Submit bundle ... #
+```
+
+For a full example, see [`examples/gas_sponsorship.py`](examples/gas_sponsorship.py).
+
+### Gas Sponsorship Notes
+
+- There is some overhead to the gas rebate contract, so the gas cost paid by the user is non-zero. This value is consistently around **17k gas**, or around **$0.0004** with current gas prices.
+- The gas estimate returned by `eth_estimateGas` will _not_ reflect the rebate, as the rebate does not _reduce_ the gas used; it merely refunds the ether paid for the gas. If you wish to understand the true gas cost ahead of time, the transaction can be simulated (e.g. with `alchemy_simulateExecution` or similar).
+- The rate limits currently sponsor up to **~500 matches/day** ($100 in gas). 
 
 ### Bundle Details
 The *quote* returned by the relayer for an external match has the following structure:
