@@ -98,7 +98,8 @@ class RequestQuoteOptions:
         if self.gas_refund_address:
             path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
         if self.refund_native_eth:
-            path += f"&{REFUND_NATIVE_ETH_QUERY_PARAM}={self.refund_native_eth}"
+            refund_native_eth_str = str(self.refund_native_eth).lower()
+            path += f"&{REFUND_NATIVE_ETH_QUERY_PARAM}={refund_native_eth_str}"
 
         return path
 

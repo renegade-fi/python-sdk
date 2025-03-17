@@ -73,21 +73,26 @@ print(f"Received bundle: {bundle}")
 
 ## Gas Sponsorship
 
-The Renegade relayer will cover the gas cost of external match transactions, up to a daily limit. When requested, the relayer will re-route the settlement transaction through a gas rebate contract. This contract refunds the cost of the transaction (in ether) to the configured address. If no address is given, the rebate is sent to `tx.origin`. 
+The Renegade relayer will cover the gas cost of external match transactions, up to a daily limit. When requested, the relayer will re-route the settlement transaction through a gas rebate contract. This contract refunds the cost of the transaction, either in native Ether, or in terms of the buy-side token in the external match.
+The rebate can optionally be sent to a configured address.
 
-To request gas sponsorship, simply add `with_gas_sponsorship` to the `AssembleExternalMatchOptions` type:
+For in-kind sponsorship, if no refund address is given, the rebate is sent to the receiver of the match. This is equivalent to the receiver getting a better price in the match, and as such the quoted price returned by the SDK is updated to reflect that.
+
+**In-kind gas sponsorship is enabled by default!**
+
+If, however, you would like to disable gas sponsorship, simply add `with_gas_sponsorship_disabled` to the `RequestQuoteOptions` type:
 ```python
 # Refund address defaults to tx.origin
-options = AssembleExternalMatchOptions.new().with_gas_sponsorship(True).with_gas_refund_address("0xdeadbeef")
-bundle = client.assemble_quote_with_options(quote, options)
-# ... Submit bundle ... #
+options = RequestQuoteOptions.new().with_gas_sponsorship_disabled(True)
+quote = client.request_quote_with_options(quote, options)
+# ... Assemble + submit bundle ... #
 ```
 
-For a full example, see [`examples/gas_sponsorship.py`](examples/gas_sponsorship.py).
+For examples on how to configure gas sponsorship, see [`examples/native_eth_gas_sponsorship.rs`](examples/native_eth_gas_sponsorship.py), and [`examples/in_kind_gas_sponsorship.py`](examples/in_kind_gas_sponsorship.py)
 
 ### Gas Sponsorship Notes
 
-- There is some overhead to the gas rebate contract, so the gas cost paid by the user is non-zero. This value is consistently around **17k gas**, or around **$0.0004** with current gas prices.
+- The refund amount may not exactly equal the gas costs, as this must be estimated before constructing the transaction so it can be returned in the quote.
 - The gas estimate returned by `eth_estimateGas` will _not_ reflect the rebate, as the rebate does not _reduce_ the gas used; it merely refunds the ether paid for the gas. If you wish to understand the true gas cost ahead of time, the transaction can be simulated (e.g. with `alchemy_simulateExecution` or similar).
 - The rate limits currently sponsor up to **~500 matches/day** ($100 in gas). 
 
@@ -102,7 +107,7 @@ The *quote* returned by the relayer for an external match has the following stru
     - `mint`: The token address
     - `amount`: The amount to receive
 - `send`: The asset transfer the external party needs to send. No fees are charged on the send transfer. (same fields as `receive`)
-- `price`: The price used for the match
+- `price`: The price used for the match. If in-kind sponsorship was enabled, and directed to the receiver of the match, this price accounts for the additional tokens received.
 - `timestamp`: The timestamp of the quote
 
 When assembled into a bundle (returned from `assemble_quote` or `request_external_match`), the structure is as follows:
