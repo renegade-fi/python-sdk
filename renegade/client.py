@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from typing import Optional
 from httpx import Headers, Response
-
+from deprecated import deprecated
 from .http import RelayerHttpClient
 from .types import (
-    ExternalOrder, ExternalMatchRequest, ExternalMatchResponse,
+    ExternalOrder, ExternalMatchResponse,
     ExternalQuoteRequest, ExternalQuoteResponse,
     AssembleExternalMatchRequest, SignedExternalQuote,
-    AtomicMatchApiBundle
+    AtomicMatchApiBundle, ApiSignedExternalQuote
 )
 
 SEPOLIA_BASE_URL = "https://testnet.auth-server.renegade.fi"
@@ -19,8 +19,9 @@ REQUEST_EXTERNAL_QUOTE_ROUTE = "/v0/matching-engine/quote"
 ASSEMBLE_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/assemble-external-match"
 REQUEST_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/request-external-match"
 
-GAS_SPONSORSHIP_QUERY_PARAM = "use_gas_sponsorship"
+DISABLE_GAS_SPONSORSHIP_QUERY_PARAM = "disable_gas_sponsorship"
 GAS_REFUND_ADDRESS_QUERY_PARAM = "refund_address"
+REFUND_NATIVE_ETH_QUERY_PARAM = "refund_native_eth"
 
 class ExternalMatchClientError(Exception):
     def __init__(self, message: str, status_code: Optional[int] = None):
@@ -59,10 +60,45 @@ class ExternalMatchOptions:
         """
         Builds the path at which the request will be sent, with query params 
         """
-        request_sponsorship_str = str(self.request_gas_sponsorship).lower()
-        path = f"{REQUEST_EXTERNAL_MATCH_ROUTE}?{GAS_SPONSORSHIP_QUERY_PARAM}={request_sponsorship_str}"
+        disable_sponsorship_str = str(not self.request_gas_sponsorship).lower()
+        path = f"{REQUEST_EXTERNAL_MATCH_ROUTE}?{DISABLE_GAS_SPONSORSHIP_QUERY_PARAM}={disable_sponsorship_str}"
         if self.gas_refund_address:
             path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
+
+        return path
+
+@dataclass
+class RequestQuoteOptions:
+    disable_gas_sponsorship: bool = False
+    gas_refund_address: Optional[str] = None
+    refund_native_eth: bool = False
+
+    @classmethod
+    def new(cls) -> "RequestQuoteOptions":
+        return cls()
+
+    def with_gas_sponsorship_disabled(self, disable_gas_sponsorship: bool) -> "RequestQuoteOptions":
+        self.disable_gas_sponsorship = disable_gas_sponsorship
+        return self
+
+    def with_gas_refund_address(self, gas_refund_address: str) -> "RequestQuoteOptions":
+        self.gas_refund_address = gas_refund_address
+        return self
+
+    def with_refund_native_eth(self, refund_native_eth: bool) -> "RequestQuoteOptions":
+        self.refund_native_eth = refund_native_eth
+        return self
+
+    def build_request_path(self) -> str:
+        """
+        Builds the path at which the request will be sent, with query params
+        """
+        disable_sponsorship_str = str(self.disable_gas_sponsorship).lower()
+        path = f"{REQUEST_EXTERNAL_QUOTE_ROUTE}?{DISABLE_GAS_SPONSORSHIP_QUERY_PARAM}={disable_sponsorship_str}"
+        if self.gas_refund_address:
+            path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
+        if self.refund_native_eth:
+            path += f"&{REFUND_NATIVE_ETH_QUERY_PARAM}={self.refund_native_eth}"
 
         return path
 
@@ -90,10 +126,12 @@ class AssembleExternalMatchOptions:
         self.updated_order = updated_order
         return self
 
+    @deprecated(version="0.1.2", reason="Request gas sponsorship when requesting a quote instead")
     def with_gas_sponsorship(self, request_gas_sponsorship: bool) -> "AssembleExternalMatchOptions":
         self.request_gas_sponsorship = request_gas_sponsorship
         return self
 
+    @deprecated(version="0.1.2", reason="Request gas sponsorship when requesting a quote instead")
     def with_gas_refund_address(self, gas_refund_address: str) -> "AssembleExternalMatchOptions":
         self.gas_refund_address = gas_refund_address
         return self
@@ -102,8 +140,14 @@ class AssembleExternalMatchOptions:
         """
         Builds the path at which the request will be sent, with query params 
         """
-        request_sponsorship_str = str(self.request_gas_sponsorship).lower()
-        path = f"{ASSEMBLE_EXTERNAL_MATCH_ROUTE}?{GAS_SPONSORSHIP_QUERY_PARAM}={request_sponsorship_str}"
+        path = ASSEMBLE_EXTERNAL_MATCH_ROUTE
+        if self.request_gas_sponsorship:
+            # We only write this query parameter if it was explicitly set. The
+            # expectation of the auth server is that when gas sponsorship is
+            # requested at the quote stage, there should be no query parameters
+            # at all in the assemble request.
+            disable_sponsorship_str = str(not self.request_gas_sponsorship).lower()
+            path += f"?{DISABLE_GAS_SPONSORSHIP_QUERY_PARAM}={disable_sponsorship_str}"
         if self.gas_refund_address:
             path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
 
@@ -165,15 +209,43 @@ class ExternalMatchClient:
         Raises:
             ExternalMatchClientError: If the request fails
         """
+        return await self.request_quote_with_options(order, RequestQuoteOptions())
+
+    async def request_quote_with_options(
+        self,
+        order: ExternalOrder,
+        options: RequestQuoteOptions
+    ) -> Optional[SignedExternalQuote]:
+        """Request a quote for the given order with custom options.
+
+        Args:
+            order: The order to request a quote for
+            options: Custom options for the quote request
+
+        Returns:
+            A signed quote if one is available, None otherwise
+
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
         request = ExternalQuoteRequest(external_order=order)
 
+        path = options.build_request_path()
         headers = self._get_headers()
-        response = await self.http_client.post_with_headers(REQUEST_EXTERNAL_QUOTE_ROUTE, request.model_dump(), headers)
+        response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
         quote_resp = await self._handle_optional_response(response)
-        if quote_resp:
-            return ExternalQuoteResponse(**quote_resp).signed_quote
 
-        return None
+        if quote_resp == None:
+            return None
+
+        quote_resp = ExternalQuoteResponse(**quote_resp)
+        signed_quote = SignedExternalQuote(
+            quote=quote_resp.signed_quote.quote,
+            signature=quote_resp.signed_quote.signature,
+            gas_sponsorship_info=quote_resp.gas_sponsorship_info
+        )
+
+        return signed_quote
 
     async def assemble_quote(self, quote: SignedExternalQuote) -> Optional[AtomicMatchApiBundle]:
         """Assemble a quote into a match bundle with default options.
@@ -206,11 +278,16 @@ class ExternalMatchClient:
         Raises:
             ExternalMatchClientError: If the request fails
         """
+        signed_quote = ApiSignedExternalQuote(
+            quote=quote.quote,
+            signature=quote.signature,
+        )
         request = AssembleExternalMatchRequest(
             do_gas_estimation=options.do_gas_estimation,
             receiver_address=options.receiver_address,
-            signed_quote=quote,
-            updated_order=options.updated_order
+            signed_quote=signed_quote,
+            updated_order=options.updated_order,
+            gas_sponsorship_info=quote.gas_sponsorship_info,
         )
 
         path = options.build_request_path()

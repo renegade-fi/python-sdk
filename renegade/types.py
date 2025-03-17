@@ -86,9 +86,23 @@ class ApiExternalQuote(BaseModelWithConfig):
     price: ApiTimestampedPrice
     timestamp: int
 
+class ApiSignedExternalQuote(BaseModelWithConfig):
+    quote: ApiExternalQuote
+    signature: str
+
+class GasSponsorshipInfo(BaseModelWithConfig):
+    refund_amount: int
+    refund_native_eth: bool
+    refund_address: Optional[str] = None
+
+class SignedGasSponsorshipInfo(BaseModelWithConfig):
+    gas_sponsorship_info: GasSponsorshipInfo
+    signature: str
+
 class SignedExternalQuote(BaseModelWithConfig):
     quote: ApiExternalQuote
     signature: str
+    gas_sponsorship_info: Optional[SignedGasSponsorshipInfo] = None
 
 class AtomicMatchApiBundle(BaseModelWithConfig):
     match_result: ApiExternalMatchResult
@@ -109,15 +123,18 @@ class ExternalMatchResponse(BaseModelWithConfig):
     # If `true`, the bundle is routed through a gas rebate contract that
     # refunds the gas used by the match to the configured address
     gas_sponsored: bool = Field(alias="is_sponsored", default=False)
+    gas_sponsorship_info: Optional[GasSponsorshipInfo] = None
 
 class ExternalQuoteRequest(BaseModelWithConfig):
     external_order: ExternalOrder
 
 class ExternalQuoteResponse(BaseModelWithConfig):
-    signed_quote: SignedExternalQuote
+    signed_quote: ApiSignedExternalQuote
+    gas_sponsorship_info: Optional[SignedGasSponsorshipInfo] = None
 
 class AssembleExternalMatchRequest(BaseModelWithConfig):
     do_gas_estimation: bool = False
     receiver_address: Optional[str] = None
-    signed_quote: Optional[SignedExternalQuote] = None 
+    signed_quote: Optional[ApiSignedExternalQuote] = None
     updated_order: Optional[ExternalOrder] = None
+    gas_sponsorship_info: Optional[SignedGasSponsorshipInfo] = None
