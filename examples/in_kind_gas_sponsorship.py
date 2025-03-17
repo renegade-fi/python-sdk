@@ -5,7 +5,7 @@ from web3 import AsyncWeb3, Web3
 from eth_account import Account
 from eth_account.signers.local import LocalAccount
 from web3.middleware import SignAndSendRawMiddlewareBuilder
-from renegade import ExternalMatchClient, AssembleExternalMatchOptions
+from renegade import ExternalMatchClient, AssembleExternalMatchOptions, RequestQuoteOptions
 from renegade.types import ExternalMatchResponse, OrderSide, ExternalOrder
 
 # Constants
@@ -60,18 +60,22 @@ async def fetch_quote_and_execute_with_sponsorship(
     client: ExternalMatchClient,
     order: ExternalOrder,
 ) -> None:
-    # Fetch a quote from the relayer
-    print("Fetching quote...")
+    # Fetch a quote from the relayer with in-kind gas sponsorship.
+    # Note that this is the default behavior, so no options need to be set.
+    # Also note: When you leave the `refund_address` unset, the in-kind refund is
+    # directed to the receiver address. This is equivalent to the trade itself
+    # having a better price, so the price in the quote will be updated to
+    # reflect this
+    print("Fetching quote with in-kind gas sponsorship...")
     quote = await client.request_quote(order)
     if not quote:
         raise ValueError("No quote found")
-    
-    # Create options with gas sponsorship enabled
-    options = AssembleExternalMatchOptions.new().with_gas_sponsorship(True).with_gas_refund_address(GAS_REFUND_ADDRESS)
-    
-    # Assemble the quote into a bundle with gas sponsorship
-    print("\nAssembling quote with gas sponsorship...")
-    bundle = await client.assemble_quote_with_options(quote, options)
+
+    if not quote.gas_sponsorship_info or quote.gas_sponsorship_info.gas_sponsorship_info.refund_native_eth:
+        raise ValueError("Quote was not sponsored in-kind")
+
+    print("\nAssembling quote...")
+    bundle = await client.assemble_quote(quote)
     if not bundle:
         raise ValueError("No bundle found")
 
