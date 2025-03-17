@@ -28,6 +28,7 @@ dependencies = [
     "cryptography>=42.0.2",
     "web3>=6.15.1",
     "python-dotenv>=1.0.1",
+    "deprecated>=1.2.18",
 ]
 
 [project.urls]
