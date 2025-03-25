@@ -63,7 +63,9 @@ class ExternalOrder(BaseModelWithConfig):
     side: OrderSide
     base_amount: Optional[int] = None
     quote_amount: Optional[int] = None
-    min_fill_size: int
+    exact_base_output: Optional[int] = None
+    exact_quote_output: Optional[int] = None
+    min_fill_size: int = 0
 
     def model_post_init(self, __context) -> None:
         self.quote_mint = Web3.to_checksum_address(self.quote_mint)
@@ -71,10 +73,20 @@ class ExternalOrder(BaseModelWithConfig):
 
     @model_validator(mode='after')
     def validate_amounts(self) -> 'ExternalOrder':
+        # Check if all amount fields are None or 0
         base_amt_none = self.base_amount is None or self.base_amount == 0
         quote_amt_none = self.quote_amount is None or self.quote_amount == 0
-        if base_amt_none == quote_amt_none:
-            raise ValueError("Exactly one of base_amount or quote_amount must be set")
+        exact_base_amt_none = self.exact_base_output is None or self.exact_base_output == 0
+        exact_quote_amt_none = self.exact_quote_output is None or self.exact_quote_output == 0
+        
+        # Count how many amount fields are set
+        amount_fields_set = sum(1 for x in [base_amt_none, quote_amt_none, exact_base_amt_none, exact_quote_amt_none] if not x)
+
+        if amount_fields_set == 0:
+            raise ValueError("One of base_amount, quote_amount, exact_base_amount, or exact_quote_amount must be set")
+        if amount_fields_set > 1:
+            raise ValueError("Only one of base_amount, quote_amount, exact_base_amount, or exact_quote_amount can be set")
+            
         return self
 
 class ApiExternalQuote(BaseModelWithConfig):
