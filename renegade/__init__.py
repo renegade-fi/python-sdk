@@ -1,4 +1,9 @@
-from .client import ExternalMatchClient, ExternalMatchOptions, ExternalMatchClientError, AssembleExternalMatchOptions, RequestQuoteOptions
+"""SDK for interacting with the Renegade darkpool."""
+
+from .client import (
+    ExternalMatchClient, ExternalMatchOptions, ExternalMatchClientError,
+    AssembleExternalMatchOptions, RequestQuoteOptions 
+)
 from .http import RelayerHttpClient
 from .types import ExternalOrder, OrderSide, AtomicMatchApiBundle, SignedExternalQuote
 
@@ -13,4 +18,4 @@ __all__ = [
     "RelayerHttpClient",
     "ExternalOrder",
     "OrderSide",
-] 
+]

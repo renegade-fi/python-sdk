@@ -9,11 +9,13 @@ from .types import (
     AssembleExternalMatchRequest, SignedExternalQuote,
     AtomicMatchApiBundle, ApiSignedExternalQuote
 )
+from importlib.metadata import version
 
 SEPOLIA_BASE_URL = "https://testnet.auth-server.renegade.fi"
 MAINNET_BASE_URL = "https://mainnet.auth-server.renegade.fi"
 
 RENEGADE_API_KEY_HEADER = "x-renegade-api-key"
+RENEGADE_SDK_VERSION_HEADER = "x-renegade-sdk-version"
 
 REQUEST_EXTERNAL_QUOTE_ROUTE = "/v0/matching-engine/quote"
 ASSEMBLE_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/assemble-external-match"
@@ -22,6 +24,26 @@ REQUEST_EXTERNAL_MATCH_ROUTE = "/v0/matching-engine/request-external-match"
 DISABLE_GAS_SPONSORSHIP_QUERY_PARAM = "disable_gas_sponsorship"
 GAS_REFUND_ADDRESS_QUERY_PARAM = "refund_address"
 REFUND_NATIVE_ETH_QUERY_PARAM = "refund_native_eth"
+
+"""
+Helpers
+"""
+
+def _get_sdk_version() -> str:
+    """Get the SDK version, falling back to the hardcoded version if not installed.
+    
+    Returns:
+        The SDK version string prefixed with "python-v"
+    """
+    try:
+        sdk_version = version('renegade-sdk')
+    except Exception:
+        sdk_version = "unknown"
+    return f"python-v{sdk_version}"
+
+"""
+Types
+"""
 
 class ExternalMatchClientError(Exception):
     def __init__(self, message: str, status_code: Optional[int] = None):
@@ -153,6 +175,10 @@ class AssembleExternalMatchOptions:
             path += f"&{GAS_REFUND_ADDRESS_QUERY_PARAM}={self.gas_refund_address}"
 
         return path
+
+"""
+Client
+"""
 
 class ExternalMatchClient:
     """Client for interacting with the Renegade external matching API.
@@ -304,10 +330,11 @@ class ExternalMatchClient:
         """Get the headers required for API requests.
         
         Returns:
-            Headers containing the API key
+            Headers containing the API key and SDK version
         """
         headers = Headers()
         headers[RENEGADE_API_KEY_HEADER] = self.api_key
+        headers[RENEGADE_SDK_VERSION_HEADER] = _get_sdk_version()
         return headers
 
     async def _handle_optional_response(self, response: Response) -> Optional[dict]:
