@@ -1,91 +1,12 @@
-import os
-from dotenv import load_dotenv
-from web3 import Web3
-from eth_account import Account
-from eth_account.signers.local import LocalAccount
-from web3.middleware import SignAndSendRawMiddlewareBuilder
-from renegade import ExternalMatchClient
-from renegade.types import ExternalMatchResponse, OrderSide, ExternalOrder
+"""Example of executing a trade synchronously."""
 
-# Constants
-BASE_MINT = "0xc3414a7ef14aaaa9c4522dfc00a4e66e74e9c25a"  # Testnet wETH
-QUOTE_MINT = "0xdf8d259c04020562717557f2b5a3cf28e92707d1"  # Testnet USDC
+from renegade import OrderSide, ExternalOrder
+from examples.helpers import BASE_MINT, QUOTE_MINT, get_client, execute_bundle_sync
 
-def get_wallet() -> tuple[Web3, LocalAccount]:
-    rpc_url = os.getenv("RPC_URL")
-    if not rpc_url:
-        raise ValueError("RPC_URL environment variable not set")
-
-    w3 = Web3(Web3.HTTPProvider(rpc_url))
-    private_key = os.getenv("PKEY")
-    if not private_key:
-        raise ValueError("PKEY environment variable not set")
+def fetch_quote_and_execute() -> None:
+    """Fetch a quote and execute the trade."""
     
-    account: LocalAccount = Account.from_key(private_key)
-    w3.eth.default_account = account.address
-    w3.middleware_onion.inject(SignAndSendRawMiddlewareBuilder.build(private_key), layer=0)
-    
-    return w3, account
-
-def execute_bundle(bundle: ExternalMatchResponse) -> None:
-    (w3, account) = get_wallet()
-
-    print("\nSubmitting bundle...")
-    tx = bundle.match_bundle.settlement_tx
-    tx['to'] = Web3.to_checksum_address(tx['to'])
-    
-    # Add required transaction fields
-    tx['nonce'] = w3.eth.get_transaction_count(account.address)
-    
-    # Get current gas prices
-    base_fee = w3.eth.get_block('latest')
-    max_priority_fee = w3.eth.max_priority_fee
-    max_fee_per_gas = 2 * base_fee.baseFeePerGas + max_priority_fee
-    
-    tx['maxFeePerGas'] = max_fee_per_gas
-    tx['maxPriorityFeePerGas'] = max_priority_fee
-    tx['chainId'] = w3.eth.chain_id
-    tx['from'] = account.address
-    
-    # Add gas estimation
-    gas = w3.eth.estimate_gas(tx)
-    tx['gas'] = int(gas * 1.1)  # Add 10% buffer
-    
-    tx_hash = w3.eth.send_transaction(tx)
-    print(f"Transaction submitted: 0x{tx_hash.hex()}")
-
-def fetch_quote_and_execute(
-    client: ExternalMatchClient,
-    order: ExternalOrder,
-) -> None:
-    # Fetch a quote from the relayer
-    print("Fetching quote...")
-    quote = client.request_quote_sync(order)
-    if not quote:
-        raise ValueError("No quote found")
-    
-    # Assemble the quote into a bundle
-    print("\nAssembling quote...")
-    bundle = client.assemble_quote_sync(quote)
-    if not bundle:
-        raise ValueError("No bundle found")
-
-    # Execute the bundle
-    execute_bundle(bundle)
-
-def main():
-    # Load environment variables
-    load_dotenv(override=True)
-
-    # Get the external match client
-    api_key = os.getenv("EXTERNAL_MATCH_KEY")
-    api_secret = os.getenv("EXTERNAL_MATCH_SECRET")
-    if not api_key or not api_secret:
-        raise ValueError("EXTERNAL_MATCH_KEY and EXTERNAL_MATCH_SECRET must be set")
-
-    client = ExternalMatchClient.new_sepolia_client(api_key, api_secret)
-
-    # Create the order
+    # Create an order for 1 wETH
     order = ExternalOrder(
         base_mint=BASE_MINT,
         quote_mint=QUOTE_MINT,
@@ -93,8 +14,16 @@ def main():
         quote_amount=30_000_000,  # $30 USDC
         min_fill_size=3_000_000,  # $3 USDC minimum
     )
-
-    fetch_quote_and_execute(client, order)
+    
+    # Get a quote
+    print("Fetching quote...")
+    client = get_client()
+    quote = client.request_quote_sync(order)
+    
+    # Assemble and execute the match
+    print("Assembling quote...")
+    bundle = client.assemble_quote_sync(quote)
+    execute_bundle_sync(bundle)
 
 if __name__ == "__main__":
-    main() 
+    fetch_quote_and_execute()
