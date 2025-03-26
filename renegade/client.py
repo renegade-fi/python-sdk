@@ -238,6 +238,20 @@ class ExternalMatchClient:
         """
         return await self.request_quote_with_options(order, RequestQuoteOptions())
 
+    def request_quote_sync(self, order: ExternalOrder) -> Optional[SignedExternalQuote]:
+        """Synchronous version of request_quote method.
+        
+        Args:
+            order: The order to request a quote for
+            
+        Returns:
+            A signed quote if one is available, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
+        return self.request_quote_with_options_sync(order, RequestQuoteOptions())
+
     async def request_quote_with_options(
         self,
         order: ExternalOrder,
@@ -260,7 +274,43 @@ class ExternalMatchClient:
         path = options.build_request_path()
         headers = self._get_headers()
         response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
-        quote_resp = await self._handle_optional_response(response)
+        quote_resp = self._handle_optional_response(response)
+
+        if quote_resp == None:
+            return None
+
+        quote_resp = ExternalQuoteResponse(**quote_resp)
+        signed_quote = SignedExternalQuote(
+            quote=quote_resp.signed_quote.quote,
+            signature=quote_resp.signed_quote.signature,
+            gas_sponsorship_info=quote_resp.gas_sponsorship_info
+        )
+
+        return signed_quote
+
+    def request_quote_with_options_sync(
+        self,
+        order: ExternalOrder,
+        options: RequestQuoteOptions
+    ) -> Optional[SignedExternalQuote]:
+        """Synchronous version of request_quote_with_options method.
+
+        Args:
+            order: The order to request a quote for
+            options: Custom options for the quote request
+
+        Returns:
+            A signed quote if one is available, None otherwise
+
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
+        request = ExternalQuoteRequest(external_order=order)
+
+        path = options.build_request_path()
+        headers = self._get_headers()
+        response = self.http_client.post_with_headers_sync(path, request.model_dump(), headers)
+        quote_resp = self._handle_optional_response(response)
 
         if quote_resp == None:
             return None
@@ -287,6 +337,20 @@ class ExternalMatchClient:
             ExternalMatchClientError: If the request fails
         """
         return await self.assemble_quote_with_options(quote, AssembleExternalMatchOptions())
+
+    def assemble_quote_sync(self, quote: SignedExternalQuote) -> Optional[AtomicMatchApiBundle]:
+        """Synchronous version of assemble_quote method.
+        
+        Args:
+            quote: The signed quote to assemble
+            
+        Returns:
+            A match bundle if assembly succeeds, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
+        return self.assemble_quote_with_options_sync(quote, AssembleExternalMatchOptions())
 
     async def assemble_quote_with_options(
         self, 
@@ -320,7 +384,45 @@ class ExternalMatchClient:
         path = options.build_request_path()
         headers = self._get_headers()
         response = await self.http_client.post_with_headers(path, request.model_dump(), headers)
-        match_resp = await self._handle_optional_response(response)
+        match_resp = self._handle_optional_response(response)
+        if match_resp:
+            return ExternalMatchResponse(**match_resp)
+
+        return None
+
+    def assemble_quote_with_options_sync(
+        self, 
+        quote: SignedExternalQuote, 
+        options: AssembleExternalMatchOptions
+    ) -> Optional[ExternalMatchResponse]:
+        """Synchronous version of assemble_quote_with_options method.
+        
+        Args:
+            quote: The signed quote to assemble
+            options: Custom options for quote assembly
+            
+        Returns:
+            A match bundle if assembly succeeds, None otherwise
+            
+        Raises:
+            ExternalMatchClientError: If the request fails
+        """
+        signed_quote = ApiSignedExternalQuote(
+            quote=quote.quote,
+            signature=quote.signature,
+        )
+        request = AssembleExternalMatchRequest(
+            do_gas_estimation=options.do_gas_estimation,
+            receiver_address=options.receiver_address,
+            signed_quote=signed_quote,
+            updated_order=options.updated_order,
+            gas_sponsorship_info=quote.gas_sponsorship_info,
+        )
+
+        path = options.build_request_path()
+        headers = self._get_headers()
+        response = self.http_client.post_with_headers_sync(path, request.model_dump(), headers)
+        match_resp = self._handle_optional_response(response)
         if match_resp:
             return ExternalMatchResponse(**match_resp)
 
@@ -337,7 +439,7 @@ class ExternalMatchClient:
         headers[RENEGADE_SDK_VERSION_HEADER] = _get_sdk_version()
         return headers
 
-    async def _handle_optional_response(self, response: Response) -> Optional[dict]:
+    def _handle_optional_response(self, response: Response) -> Optional[dict]:
         """Handle an API response that may be empty.
         
         Args:

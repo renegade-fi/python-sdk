@@ -5,7 +5,7 @@ import hmac
 import hashlib
 import time
 import base64
-from httpx import AsyncClient, Headers, Response
+from httpx import AsyncClient, Client, Headers, Response
 
 REQUEST_SIGNATURE_DURATION = timedelta(seconds=10)
 RENEGADE_HEADER_NAMESPACE = "x-renegade"
@@ -29,7 +29,8 @@ class RelayerHttpClient:
             base_url: The base URL of the relayer API
             auth_key: The base64-encoded authentication key for request signing
         """
-        self.client = AsyncClient()
+        self.async_client = AsyncClient()
+        self.sync_client = Client()
         self.base_url = base_url
         # Decode base64 auth key
         self.auth_key = base64.b64decode(auth_key)
@@ -46,6 +47,18 @@ class RelayerHttpClient:
         """
         return await self.post_with_headers(path, body, Headers())
 
+    def post_sync(self, path: str, body: Any) -> Response:
+        """Make a synchronous POST request without custom headers.
+        
+        Args:
+            path: The API endpoint path
+            body: The request body to send
+            
+        Returns:
+            The API response
+        """
+        return self.post_with_headers_sync(path, body, Headers())
+
     async def get(self, path: str) -> Response:
         """Make a GET request without custom headers.
         
@@ -56,6 +69,17 @@ class RelayerHttpClient:
             The API response
         """
         return await self.get_with_headers(path, Headers())
+
+    def get_sync(self, path: str) -> Response:
+        """Make a synchronous GET request without custom headers.
+        
+        Args:
+            path: The API endpoint path
+            
+        Returns:
+            The API response
+        """
+        return self.get_with_headers_sync(path, Headers())
 
     async def post_with_headers(self, path: str, body: Any, custom_headers: Headers) -> Response:
         """Make a POST request with custom headers.
@@ -71,7 +95,24 @@ class RelayerHttpClient:
         url = f"{self.base_url}{path}"
         body_bytes = json.dumps(body).encode()
         headers = self._add_auth(path, custom_headers, body_bytes)
-        response = await self.client.post(url, headers=headers, content=body_bytes)
+        response = await self.async_client.post(url, headers=headers, content=body_bytes)
+        return response
+
+    def post_with_headers_sync(self, path: str, body: Any, custom_headers: Headers) -> Response:
+        """Make a synchronous POST request with custom headers.
+        
+        Args:
+            path: The API endpoint path
+            body: The request body to send
+            custom_headers: Additional headers to include
+            
+        Returns:
+            The API response
+        """
+        url = f"{self.base_url}{path}"
+        body_bytes = json.dumps(body).encode()
+        headers = self._add_auth(path, custom_headers, body_bytes)
+        response = self.sync_client.post(url, headers=headers, content=body_bytes)
         return response
 
     async def get_with_headers(self, path: str, custom_headers: Headers) -> Response:
@@ -86,8 +127,22 @@ class RelayerHttpClient:
         """
         url = f"{self.base_url}{path}"
         headers = self._add_auth(path, custom_headers, b"")
+        response = await self.async_client.get(url, headers=headers)
+        return response
+
+    def get_with_headers_sync(self, path: str, custom_headers: Headers) -> Response:
+        """Make a synchronous GET request with custom headers.
         
-        response = await self.client.get(url, headers=headers)
+        Args:
+            path: The API endpoint path
+            custom_headers: Additional headers to include
+            
+        Returns:
+            The API response
+        """
+        url = f"{self.base_url}{path}"
+        headers = self._add_auth(path, custom_headers, b"")
+        response = self.sync_client.get(url, headers=headers)
         return response
 
     def _get_header_bytes(self, headers: Headers) -> bytes:
