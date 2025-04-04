@@ -149,4 +149,3 @@ class AssembleExternalMatchRequest(BaseModelWithConfig):
     receiver_address: Optional[str] = None
     signed_quote: Optional[ApiSignedExternalQuote] = None
     updated_order: Optional[ExternalOrder] = None
-    gas_sponsorship_info: Optional[SignedGasSponsorshipInfo] = None
