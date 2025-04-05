@@ -378,7 +378,6 @@ class ExternalMatchClient:
             receiver_address=options.receiver_address,
             signed_quote=signed_quote,
             updated_order=options.updated_order,
-            gas_sponsorship_info=quote.gas_sponsorship_info,
         )
 
         path = options.build_request_path()
@@ -416,7 +415,6 @@ class ExternalMatchClient:
             receiver_address=options.receiver_address,
             signed_quote=signed_quote,
             updated_order=options.updated_order,
-            gas_sponsorship_info=quote.gas_sponsorship_info,
         )
 
         path = options.build_request_path()
