@@ -5,10 +5,6 @@ from renegade import OrderSide, ExternalOrder
 from renegade.client import AssembleExternalMatchOptions
 from examples.helpers import BASE_MINT, QUOTE_MINT, get_client, execute_bundle_async
 
-# Constants
-BASE_MINT = "0xc3414a7ef14aaaa9c4522dfc00a4e66e74e9c25a"  # Testnet wETH
-QUOTE_MINT = "0xdf8d259c04020562717557f2b5a3cf28e92707d1"  # Testnet USDC
-
 async def fetch_quote_and_execute() -> None:
     """Fetch a quote, modify it, and execute the trade."""
     # Create the order

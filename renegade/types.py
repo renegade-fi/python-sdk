@@ -146,6 +146,7 @@ class ExternalQuoteResponse(BaseModelWithConfig):
 
 class AssembleExternalMatchRequest(BaseModelWithConfig):
     do_gas_estimation: bool = False
+    allow_shared: bool = False
     receiver_address: Optional[str] = None
     signed_quote: Optional[ApiSignedExternalQuote] = None
     updated_order: Optional[ExternalOrder] = None
