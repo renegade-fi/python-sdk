@@ -128,6 +128,7 @@ class RequestQuoteOptions:
 @dataclass
 class AssembleExternalMatchOptions:
     do_gas_estimation: bool = False
+    allow_shared: bool = False
     receiver_address: Optional[str] = None
     updated_order: Optional[ExternalOrder] = None
     request_gas_sponsorship: bool = False
@@ -139,6 +140,10 @@ class AssembleExternalMatchOptions:
 
     def with_gas_estimation(self, do_gas_estimation: bool) -> "AssembleExternalMatchOptions":
         self.do_gas_estimation = do_gas_estimation
+        return self
+    
+    def with_allow_shared(self, allow_shared: bool) -> "AssembleExternalMatchOptions":
+        self.allow_shared = allow_shared
         return self
 
     def with_receiver_address(self, receiver_address: str) -> "AssembleExternalMatchOptions":
@@ -375,6 +380,7 @@ class ExternalMatchClient:
         )
         request = AssembleExternalMatchRequest(
             do_gas_estimation=options.do_gas_estimation,
+            allow_shared=options.allow_shared,
             receiver_address=options.receiver_address,
             signed_quote=signed_quote,
             updated_order=options.updated_order,

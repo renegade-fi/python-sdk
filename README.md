@@ -131,7 +131,8 @@ uv run examples/quote_validation.py
 ### Rate Limits
 The rate limits for external match endpoints are as follows: 
 - **Quote**: 100 requests per minute
-- **Assemble**: 5 _unsettled_ bundles per minute. That is, if an assembled bundle is submitted on-chain, the rate limiter will reset. 
+- **Assemble (Exclusive Bundle)**: 5 _unsettled_ bundles per minute. That is, if an assembled bundle is submitted on-chain, the rate limiter will reset. 
+- **Assemble (Shared Bundle)**: 50 _unsettled_ shared bundles per minute. A shared bundle is an assembled bundle that the relayer may send to multiple external parties, rather than enforcing that only one external party can settle the bundle. See [`examples/shared_bundle.py`](examples/shared_bundle.py) for an example of how to assemble a shared bundle.
 If an assembled match is not settled on-chain, the rate limiter will remove one token from the per-minute allowance.
 
 ### Supported Tokens
