@@ -297,7 +297,7 @@ class ExternalMatchClient:
         self,
         order: ExternalOrder,
         options: RequestQuoteOptions
-    ) -> Optional[SignedExternalQuote]:
+    ) -> Optional[ExternalQuoteResponse]:
         """Synchronous version of request_quote_with_options method.
 
         Args:
@@ -329,7 +329,7 @@ class ExternalMatchClient:
 
         return signed_quote
 
-    async def assemble_quote(self, quote: SignedExternalQuote) -> Optional[AtomicMatchApiBundle]:
+    async def assemble_quote(self, quote: SignedExternalQuote) -> Optional[ExternalMatchResponse]:
         """Assemble a quote into a match bundle with default options.
         
         Args:
@@ -343,7 +343,7 @@ class ExternalMatchClient:
         """
         return await self.assemble_quote_with_options(quote, AssembleExternalMatchOptions())
 
-    def assemble_quote_sync(self, quote: SignedExternalQuote) -> Optional[AtomicMatchApiBundle]:
+    def assemble_quote_sync(self, quote: SignedExternalQuote) -> Optional[ExternalMatchResponse]:
         """Synchronous version of assemble_quote method.
         
         Args:
