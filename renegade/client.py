@@ -7,12 +7,12 @@ from .types import (
     ExternalOrder, ExternalMatchResponse,
     ExternalQuoteRequest, ExternalQuoteResponse,
     AssembleExternalMatchRequest, SignedExternalQuote,
-    AtomicMatchApiBundle, ApiSignedExternalQuote
+    ApiSignedExternalQuote
 )
 from importlib.metadata import version
 
-SEPOLIA_BASE_URL = "https://testnet.auth-server.renegade.fi"
-MAINNET_BASE_URL = "https://mainnet.auth-server.renegade.fi"
+ARBITRUM_SEPOLIA_BASE_URL = "https://arbitrum-sepolia.auth-server.renegade.fi"
+ARBITRUM_ONE_BASE_URL = "https://arbitrum-one.auth-server.renegade.fi"
 
 RENEGADE_API_KEY_HEADER = "x-renegade-api-key"
 RENEGADE_SDK_VERSION_HEADER = "x-renegade-sdk-version"
@@ -204,30 +204,58 @@ class ExternalMatchClient:
         self.http_client = RelayerHttpClient(base_url, api_secret)
 
     @classmethod
-    def new_sepolia_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
-        """Create a new client configured for the Sepolia testnet.
-        
+    def new_arbitrum_sepolia_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for the Arbitrum Sepolia testnet.
+
         Args:
             api_key: The API key for authentication
             api_secret: The API secret for request signing
-            
+
         Returns:
-            A new ExternalMatchClient configured for Sepolia
+            A new ExternalMatchClient configured for Arbitrum Sepolia
         """
-        return cls(api_key, api_secret, SEPOLIA_BASE_URL)
+        return cls(api_key, api_secret, ARBITRUM_SEPOLIA_BASE_URL)
 
     @classmethod
-    def new_mainnet_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
-        """Create a new client configured for mainnet.
-        
+    @deprecated(version="0.1.8", reason="Use new_arbitrum_sepolia_client instead")
+    def new_sepolia_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for the Arbitrum Sepolia testnet.
+
         Args:
             api_key: The API key for authentication
             api_secret: The API secret for request signing
-            
+
+        Returns:
+            A new ExternalMatchClient configured for Arbitrum Sepolia
+        """
+        return cls.new_arbitrum_sepolia_client(api_key, api_secret)
+
+    @classmethod
+    def new_arbitrum_one_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for Arbitrum One.
+
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+
+        Returns:
+            A new ExternalMatchClient configured for Arbitrum One
+        """
+        return cls(api_key, api_secret, ARBITRUM_ONE_BASE_URL)
+
+    @classmethod
+    @deprecated(version="0.1.8", reason="Use new_arbitrum_one_client instead")
+    def new_mainnet_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for mainnet.
+
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+
         Returns:
             A new ExternalMatchClient configured for mainnet
         """
-        return cls(api_key, api_secret, MAINNET_BASE_URL)
+        return cls.new_arbitrum_one_client(api_key, api_secret)
 
     async def request_quote(self, order: ExternalOrder) -> Optional[SignedExternalQuote]:
         """Request a quote for the given order.

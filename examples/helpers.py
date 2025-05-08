@@ -119,4 +119,4 @@ def get_client() -> ExternalMatchClient:
     if not api_key or not api_secret:
         raise ValueError("EXTERNAL_MATCH_KEY and EXTERNAL_MATCH_SECRET must be set")
 
-    return ExternalMatchClient.new_sepolia_client(api_key, api_secret) 
+    return ExternalMatchClient.new_arbitrum_sepolia_client(api_key, api_secret)
