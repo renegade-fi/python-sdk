@@ -49,6 +49,7 @@ async def execute_bundle_async(bundle: ExternalMatchResponse) -> None:
 
     print("Submitting bundle...")
     tx = bundle.match_bundle.settlement_tx
+    print(tx)
     tx['to'] = Web3.to_checksum_address(tx['to'])
     
     # Add required transaction fields
@@ -103,7 +104,7 @@ def execute_bundle_sync(bundle: ExternalMatchResponse) -> None:
     tx_hash = w3.eth.send_transaction(tx)
     print(f"Transaction submitted: 0x{tx_hash.hex()}")
 
-def get_client() -> ExternalMatchClient:
+def get_client(base: bool = False) -> ExternalMatchClient:
     """Get an ExternalMatchClient instance from environment variables.
     
     Returns:
@@ -119,4 +120,7 @@ def get_client() -> ExternalMatchClient:
     if not api_key or not api_secret:
         raise ValueError("EXTERNAL_MATCH_KEY and EXTERNAL_MATCH_SECRET must be set")
 
-    return ExternalMatchClient.new_arbitrum_sepolia_client(api_key, api_secret)
+    if base:
+        return ExternalMatchClient.new_base_sepolia_client(api_key, api_secret)
+    else:
+        return ExternalMatchClient.new_arbitrum_sepolia_client(api_key, api_secret)
