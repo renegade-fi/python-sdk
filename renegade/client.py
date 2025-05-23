@@ -13,6 +13,8 @@ from importlib.metadata import version
 
 ARBITRUM_SEPOLIA_BASE_URL = "https://arbitrum-sepolia.auth-server.renegade.fi"
 ARBITRUM_ONE_BASE_URL = "https://arbitrum-one.auth-server.renegade.fi"
+BASE_SEPOLIA_BASE_URL = "https://base-sepolia.auth-server.renegade.fi"
+BASE_MAINNET_BASE_URL = "https://base-mainnet.auth-server.renegade.fi"
 
 RENEGADE_API_KEY_HEADER = "x-renegade-api-key"
 RENEGADE_SDK_VERSION_HEADER = "x-renegade-sdk-version"
@@ -217,6 +219,19 @@ class ExternalMatchClient:
         return cls(api_key, api_secret, ARBITRUM_SEPOLIA_BASE_URL)
 
     @classmethod
+    def new_base_sepolia_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for Base Sepolia testnet.
+
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+
+        Returns:
+            A new ExternalMatchClient configured for Base Sepolia
+        """
+        return cls(api_key, api_secret, BASE_SEPOLIA_BASE_URL)
+
+    @classmethod
     @deprecated(version="0.1.8", reason="Use new_arbitrum_sepolia_client instead")
     def new_sepolia_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
         """Create a new client configured for the Arbitrum Sepolia testnet.
@@ -242,6 +257,19 @@ class ExternalMatchClient:
             A new ExternalMatchClient configured for Arbitrum One
         """
         return cls(api_key, api_secret, ARBITRUM_ONE_BASE_URL)
+    
+    @classmethod
+    def new_base_mainnet_client(cls, api_key: str, api_secret: str) -> "ExternalMatchClient":
+        """Create a new client configured for Base mainnet.
+
+        Args:
+            api_key: The API key for authentication
+            api_secret: The API secret for request signing
+
+        Returns:
+            A new ExternalMatchClient configured for Base mainnet
+        """
+        return cls(api_key, api_secret, BASE_MAINNET_BASE_URL)
 
     @classmethod
     @deprecated(version="0.1.8", reason="Use new_arbitrum_one_client instead")
